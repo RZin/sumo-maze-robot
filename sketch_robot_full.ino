@@ -1,6 +1,6 @@
 // #3 Task
 
-#include <Encoder.h>;
+#include <Encoder.h>
 
 // motor_left
 #define BIN1 7 
@@ -9,10 +9,10 @@
 
 // pulses counting vars
 Encoder motorLeft(18, 19);
-long last_pulses_num_Left  = 0;
+long last_pulses_num_Left = 0;
 long curr_pulses_num_Left;
 int pulses_num_left;
-int NL = pulses_num_right; // not sure of pointer
+int NL; // not sure of pointer
 
 // motor_right
 #define AIN1 5 
@@ -24,7 +24,7 @@ Encoder motorRight(3, 2);
 long last_pulses_num_Right = 0;
 long curr_pulses_num_Right;
 int pulses_num_right;
-int NR = pulses_num_right;
+int NR;
 
 unsigned long total_pulses_num_Left = 0; // total robots distance
 unsigned long total_pulses_num_Right = 0;
@@ -42,7 +42,8 @@ const int line_F_pin = A5;
 const int line_B_pin = A6;
 
 // task constants
-const int counting_freq = 10; //Hz set 10
+const float counting_freq = 1.0; //Hz set 10
+const float left_pulses_correction = 0.96;
 
 void setup() {
   // put your setup code here, to run once:
@@ -54,10 +55,10 @@ void setup() {
   pinMode(BIN2, OUTPUT);
   pinMode(PWMA, OUTPUT);
   pinMode(PWMB, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(2), count_pulses_interrupt, RISING); // mb LOW or RISING
-  attachInterrupt(digitalPinToInterrupt(3), count_pulses_interrupt, RISING);
-  attachInterrupt(digitalPinToInterrupt(18), count_pulses_interrupt, RISING);
-  attachInterrupt(digitalPinToInterrupt(19), count_pulses_interrupt, RISING);
+//  attachInterrupt(digitalPinToInterrupt(2), count_pulses_interrupt, RISING); // mb LOW or RISING
+//  attachInterrupt(digitalPinToInterrupt(3), count_pulses_interrupt, RISING);
+//  attachInterrupt(digitalPinToInterrupt(18), count_pulses_interrupt, RISING);
+//  attachInterrupt(digitalPinToInterrupt(19), count_pulses_interrupt, RISING);
   Serial.begin(9600);
 }
 
@@ -90,11 +91,7 @@ boolean sense_line_B () {
 }
 // 5. 
 void count_pulses(){
-  
-  curr_Millis=millis();
-  
-  if (curr_Millis-prev_count_Millis >= 1000/counting_freq) {
-    
+
     // call every 100ms for 10Hz 
     curr_pulses_num_Left = motorLeft.read();  
     curr_pulses_num_Right = motorRight.read();
@@ -102,6 +99,13 @@ void count_pulses(){
     // count 
     pulses_num_left = curr_pulses_num_Left - last_pulses_num_Left;  
     pulses_num_right = curr_pulses_num_Right - last_pulses_num_Right;
+    NL = pulses_num_left*left_pulses_correction;
+    NR = pulses_num_right;
+//    Serial.print(" NL ");
+//    Serial.print(NL);
+//    Serial.print(" NR ");
+//    Serial.print(NR);
+//    Serial.println();
     
     // update vars
     last_pulses_num_Left = curr_pulses_num_Left;
@@ -109,107 +113,23 @@ void count_pulses(){
     
     total_pulses_num_Left += abs(pulses_num_left);
     total_pulses_num_Right += abs(pulses_num_right);
-    
-    // update timer
-    prev_count_Millis=curr_Millis;
-  }
+
 }
 
 void test_sensors(){
   // testing sensors data
-  Serial.print("dist_L ");
-  Serial.println(sense_L ());    
-  Serial.print("dist_F ");
-  Serial.println(sense_F ());  
-  Serial.print("dist_R ");
-  Serial.println(sense_R ());  
-  Serial.print("line_F_val ");
-  Serial.println(sense_line_F ());  
-  Serial.print("line_B_val ");
-  Serial.println(sense_line_B ());
+  Serial.print(" dist_L ");
+  Serial.print(sense_L ());    
+  Serial.print(" dist_F ");
+  Serial.print(sense_F ());  
+  Serial.print(" dist_R ");
+  Serial.print(sense_R ());  
+  Serial.print(" line_F_val ");
+  Serial.print(sense_line_F ());  
+  Serial.print(" line_B_val ");
+  Serial.print(sense_line_B ());
+  Serial.println();
   delay(5000);    
-}
-
-// for movement
-void rotate_by_combination(int comb[4], int m_left_speed, int m_right_speed) {
-  // comb[4] takes states of {AIN1 AIN2 BIN1 BIN2} (private in future)
-  if (0 <= m_left_speed <= 255 && 0 <= m_right_speed <= 255) {
-    analogWrite(PWMB, m_left_speed); // m_left  speed
-    analogWrite(PWMA, m_right_speed); // m_right speed
-  }
-  else { Serial.println("Speed is Out of limits !!!");}
-  digitalWrite(BIN1, comb[0]); // m_left clockwise
-  digitalWrite(BIN2, comb[1]); // m_left anticlockwise
-  digitalWrite(AIN1, comb[2]); // m_right  clockwise
-  digitalWrite(AIN2, comb[3]); // m_right  anticlockwise
-  }
-
-void moveForward() {
-  int front_left_comb[4] = {1, 0, 1, 0};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({1, 0, 1, 0});
-}
-
-void moveBackward() {
-  int front_left_comb[4] = {0, 1, 0, 1};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({0, 1, 0, 1});
-}
-
-void turnRight() {
-  int front_left_comb[4] = {1, 0, 0, 1};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({1, 0, 1, 0});
-}
-
-void turnLeft() {
-  int front_left_comb[4] = {0, 1, 1, 0};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({1, 0, 1, 0});
-}
-
-void stopMoving() {
-  int front_left_comb[4] = {0, 0, 0, 0};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({1, 0, 1, 0});
-}
-
-void stopFast() {
-  int front_left_comb[4] = {1, 1, 1, 1};
-  rotate_by_combination (front_left_comb);
-  // change to just rotate_by_combination ({1, 0, 1, 0});
-}
-
-void moveForwardRight () {
-  int front_left_comb[4] = {1, 0, 0, 0};
-  rotate_by_combination(front_left_comb);
-}
-
-void moveBackwardRight () {
-  int front_right_comb[4] = {0, 1, 0, 0};
-  rotate_by_combination(front_right_comb);
-}
-
-void moveForwardLeft () {
-  int front_left_comb[4] = {0, 0, 1, 0};
-  rotate_by_combination(front_left_comb);
-}
-
-void moveBackwardLeft () {
-  int front_right_comb[4] = {0, 0, 0, 1};
-  rotate_by_combination(front_right_comb);
-}
-
-void test_movements(){
-  // testing moving functions
-  turnRight();
-  delay(2150);
-  stopFast();
-  count_pulses(); // with given freq
-
-  Serial.print("pulses_num_left: ");
-  Serial.print(pulses_num_left);
-  Serial.println();  
 }
 
 
@@ -217,13 +137,11 @@ void test_movements(){
 // C O N T R O L
 //
 
-float NL=0;
-float NR=0;
 
-float CL=8100; // pulses per revolution
+float CL=8000; // pulses per revolution
 float CR=8000;
 
-int t=0;
+int t = 0;
 
 float N[10][2] =
         {
@@ -238,51 +156,51 @@ float N[10][2] =
                 {1200,800},
         };
 
-float x[10]={0};
-float y[10]={0};
-float theta[10]={0};
+// positions 
+float x_curr;
+float x_prev;
+float y_curr;
+float y_prev;
+float theta_curr;
+float theta_prev;
 
-float D[10]={0};
+float D;
 
-float v[10]={0};
-float w[10]={0};
+// robot dimensions
+const float b = 0.095; //cm 0.095 mm 20
+const float r = 0.015; // cm 0.015 mm 5
 
-float VD = 200; // 255 max
-float WD = 0.0; //
+float C=(CL+CR)/2; // not sure but for me 8000 was 100
 
-//float vd[10]={1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5};
-//float wd[10]={1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
+double VD = 0.0; // 0.08 max m/s
+double WD = 0.7; // 2 max rad/s
 
+float VMAX = 0.08; // m/s
+float WMAX = 3.14/2; // rad/s PI*r half of round 1,57
+
+float WLR_MAX = 8.935;    // wheels max vel
 //define vels
-float wL[10]={0};
-float wR[10]={0};
+double v_curr;
+double w_curr;
+double v_prev=0;
+double w_prev=0;
 
-float v_curr= 0;
-float w_curr= 0;
-
-float wL_curr= 0;
-float wR_curr= 0;
+double wL_curr;
+double wR_curr;
 
 //define des vels
-float wLd[10] = {0};
-float wRd[10] = {0};
+double vd_curr;
+double wd_curr;
 
-float vd_curr= 0;
-float wd_curr= 0;
-
-float wLd;
-float wRd;
-
-const float b=20; //cm
-const float r=5; // cm
-float C=(CL+CR)/2; // not sure but for me 8000 was 100
+double wLd_curr;
+double wRd_curr;
 
 void encUpdate(int t) {
     NL = N[t][0]; // read
     NR = N[t][1];
 }
 
-const int delta_t = 1000/counting_freq;
+const float delta_t = 1/counting_freq; // seconds
 
 void cmd_vel(){
     v_curr = (float)(NL+NR)*PI*r/C/delta_t;
@@ -292,12 +210,15 @@ void cmd_vel(){
 void vel_to_wheels(float V, float W){
     wL_curr = (float)(V-b*W/2)/r;
     wR_curr = (float)(V+b*W/2)/r;
+    // 0.08/0.015 + 0.095*1,57/2/0.015 = 5,33 + 4,97 = 10.3 Hz
+    // mb wL_currMAX = 5.5
 }
 
 void vel_to_wheels_desired(float V_des, float W_des){
-    wLd_curr = (float)(V_des-b*W_des/2)/r;
+    wLd_curr = (float)(V_des-b*W_des/2)/r; 
     wRd_curr = (float)(V_des+b*W_des/2)/r;
 }
+
 
 void posUpdate(int NL, int NR, float r, float b, float C) {
 
@@ -307,9 +228,9 @@ void posUpdate(int NL, int NR, float r, float b, float C) {
     float D=(float)(DL+DR)/2;
 
     // not sure
-    x[t+1] = x[t] + D * cos(theta[t]) ;
-    y[t+1] = y[t] + D * sin(theta[t]) ;
-    theta[t+1] = theta[t] + (DR-DL)/b ;
+    x_curr = x_prev + D * cos(theta_prev) ;
+    y_curr = y_prev + D * sin(theta_prev) ;
+    theta_curr = theta_prev + (DR-DL)/b ;
 
     // get v_curr, w_curr
     cmd_vel();
@@ -322,89 +243,310 @@ void posUpdate(int NL, int NR, float r, float b, float C) {
 void calc_pose2(){
     // get NL NR
     count_pulses();
+//    Serial.print(" NL ");
+//    Serial.print(NL);
+//    Serial.print(" NR ");
+//    Serial.print(NR);
+//    Serial.println();
 
-    v[t+1] = (2*PI*r)*(NR+NL)/C/2/delta_t;
-    w[t+1] = (2*PI*r)*(NR-NL)/C/b/delta_t;
+    v_curr = (2*PI*r)*(NR+NL)/C/2/delta_t; // (2*3.14*0.015)*40000/8000/2/0.1
+    w_curr = (2*PI*r)*(NR-NL)/C/b/delta_t; // 
+//    Serial.print(" v_curr ");
+//    Serial.print(v_curr);    
+//    Serial.print(" w_curr ");
+//    Serial.print(w_curr);    
+//    Serial.println();
 
-    theta[t+1] = atan2(sin(theta[t]+w[t+1]), cos(theta[t]+w[t+1]));
-    x[t+1] = x[t] + v[t+1] * cos(theta[t+1]);
-    y[t+1] = y[t] + v[t+1] * sin(theta[t+1]);
+    theta_curr = atan2(sin(theta_prev + w_curr), cos(theta_prev + w_curr));
+    x_curr = x_prev + v_curr * cos(theta_curr);
+    y_curr = y_prev + v_curr * sin(theta_curr);
 }
 
 // gain constants
-float GL[10] = {0};
-float GR[10] = {0};
+float G_curr[2]={0,0};
+
+// define errors at t=1
+float ep_curr[2];
+float ep_prev[2] = {0, 0};
+
+float ei_curr[2];
+float ei_prev[2] = {0, 0};
+
+float ed_curr[2];
+float ed_prev[2] = {0, 0};
 
 
 void PID (){
-    // define errors
-    float ep[10][2] =
-            {{wLd[0] - wL[0], wRd[0] - wR[0]}};
-
-    float ei[10][2] =
-            {{0,0}};
-
-    float ed[10][2] =
-            {{0,0}};
-
     // coefs Kp
-    float Kp = 0.5;
-    float Ki = 0;
-    float Kd = 0;
+    float Kp = 30.0;
+    float Ki = 1.8;
+    float Kd = 1.0;
 
     // update errors
-
     // We have wL_curr wR_curr
 
     // left proportional
-    ep[t+1][0] = wLd_curr - wL_curr;
+    ep_curr[0] = wLd_curr - wL_curr; // hz
     // right proportional
-    ep[t+1][1] = wRd_curr - wR_curr;
+    ep_curr[1] = wRd_curr - wR_curr;
     // left integral
-    ei[t+1][0] = (ei[t][0] + ep[t+1][0])*delta_t; // delta_t or 1
+    ei_curr[0] = (ei_prev[0] + ep_curr[0])*delta_t; // delta_t or 1
     // right integral
-    ei[t+1][1] = (ei[t][1] + ep[t+1][1])*delta_t;
-
+    ei_curr[1] = (ei_prev[1] + ep_curr[1])*delta_t; // delta_t or 1
     // left derivative
-    ed[0][t+1] = (ep[t+1][0] - ep[t][0])/delta_t;
+    ed_curr[0] = (ep_curr[0] - ep_prev[0])/delta_t;
     // right derivative
-    ed[1][t+1] = (ep[t+1][1] - ep[t][1])/delta_t;
+    ed_curr[1] = (ep_curr[1] - ep_prev[1])/delta_t;
 
     // get the gain
-    GL[t+1] = Kp*ep[t+1][0] + Ki*ei[t+1][0] + Kd*ed[t+1][0];
-    GR[t+1] = Kp*ep[t+1][1] + Ki*ei[t+1][1] + Kd*ed[t+1][1];
+//    G_prev = G_curr; // hz 
+        
+    G_curr[0] = G_curr[0] + Kp*ep_curr[0] + Ki*ei_curr[0] + Kd*ed_curr[0]; // hz 
+    G_curr[1] = G_curr[1] + Kp*ep_curr[1] + Ki*ei_curr[1] + Kd*ed_curr[1];
+    
+
+
+    
 }
-
-
-int t = 0;
 
 void encFunc() {t++;}
 
 void pid_controller(){
     // 1. set desired
-    VD = 200; // by now constant
-    WD = 0;
+//    VD = 0.03; // by now constant m/s
+//    WD = 0.0;
     // 2. get wLd_curr wRd_curr
     vel_to_wheels_desired(VD, WD); // updates wLd_curr wRd_curr
+//    Serial.print(" wLd_curr ");
+//    Serial.print(wLd_curr);    
+//    Serial.print(" wRd_curr ");
+//    Serial.print(wRd_curr);    
+//    Serial.println();
     // 3. Run algorithm Calculate Pose 2
-    calc_pose2(); // get v[t+1] w[t+1] theta[t+1] x[t+1] y[t+1]
+    calc_pose2(); // get v w theta x y
+
+    
     // 4. Calculate the real wL, wR
-    cmd_vel(); // updates v_curr, w_curr
     vel_to_wheels(v_curr, w_curr); // updates wL_curr wR_curr
+//    Serial.print(" wL_curr ");
+//    Serial.print(wL_curr);    
+//    Serial.print(" wR_curr ");
+//    Serial.print(wR_curr);    
+//    Serial.println();
     // run PID
     PID(); // gets GL GR
+//    Serial.print(" GL_curr ");
+//    Serial.print(G_curr[0]);
+//    Serial.print(" GR_curr ");
+//    Serial.print(G_curr[1]);
+//    Serial.println();
+      
+// use limit for G
 
 }
+
+// for movement
+void rotate_by_combination(int comb[4], int m_left_speed, int m_right_speed) {
+    // comb[4] takes states of {AIN1 AIN2 BIN1 BIN2} (private in future)
+    if (0 <= m_left_speed <= 255 && 0 <= m_right_speed <= 255) {
+        analogWrite(PWMB, m_left_speed); // m_left  speed
+        analogWrite(PWMA, m_right_speed); // m_right speed
+    }
+    else { Serial.println("Speed is Out of limits !!!");}
+    digitalWrite(BIN1, comb[0]); // m_left clockwise
+    digitalWrite(BIN2, comb[1]); // m_left anticlockwise
+    digitalWrite(AIN1, comb[2]); // m_right  clockwise
+    digitalWrite(AIN2, comb[3]); // m_right  anticlockwise
+}
+
+void move_at(float speed_left, float speed_right) {
+    // speed_left
+    
+    int comb[4]={};
+    // cut exceeding vals
+    if (speed_left >= 255) { // -800 
+      speed_left = 255; 
+    }
+    if (speed_left <= -255) {
+      speed_left = -255;
+    }
+    if (speed_right >= 255) {
+      speed_right = 255;
+    }
+    if (speed_right <= -255) {
+      speed_right = -255;
+    }
+
+    if (speed_left>0 && speed_right>0){
+        comb[0] = 1;
+        comb[1] = 0;
+        comb[2] = 1;
+        comb[3] = 0;
+//        Serial.println(" comb[4] = {1, 0, 1, 0}");
+    }
+    else if (speed_left>0 && speed_right<0){
+//        int comb[4] = {1, 0, 0, 1};
+        comb[0] = 1;
+        comb[1] = 0;
+        comb[2] = 0;
+        comb[3] = 1;
+//        Serial.println(" comb[4] = {1, 0, 0, 1}");
+    }
+    else if (speed_left<0 && speed_right>0){
+//        int comb[4] = {0, 1, 1, 0};
+        comb[0] = 0;
+        comb[1] = 1;
+        comb[2] = 1;
+        comb[3] = 0;
+//        Serial.println(" comb[4] = {0, 1, 1, 0}");
+    }
+    else if (speed_left<=0 && speed_right<=0){
+//        int comb[4] = {0, 1, 0, 1};
+        comb[0] = 0;
+        comb[1] = 1;
+        comb[2] = 0;
+        comb[3] = 1;
+//        Serial.println(" comb[4] = {0, 1, 0, 1}");
+    }
+    else {
+      Serial.print(" Unexpected combination of speeds ");
+      Serial.print(speed_left);
+      Serial.print(speed_right);
+      Serial.println();
+      }
+
+
+//    Serial.print(" speed_left ");  
+//    Serial.print(speed_left);  
+//    Serial.print(" speed_right "); 
+//    Serial.print(speed_right); 
+//    Serial.println();
+
+    rotate_by_combination(comb, abs(speed_left), abs(speed_right));
+
+
+}
+
+void moveForward() {
+    int comb[4] = {1, 0, 1, 0};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({1, 0, 1, 0});
+}
+
+void moveBackward() {
+    int comb[4] = {0, 1, 0, 1};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({0, 1, 0, 1});
+}
+
+void turnRight() {
+    int comb[4] = {1, 0, 0, 1};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({1, 0, 1, 0});
+}
+
+void turnLeft() {
+    int comb[4] = {0, 1, 1, 0};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({1, 0, 1, 0});
+}
+
+void stopMoving() {
+    int comb[4] = {0, 0, 0, 0};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({1, 0, 1, 0});
+}
+
+void stopFast() {
+    int comb[4] = {1, 1, 1, 1};
+    rotate_by_combination (comb, 255, 255);
+    // change to just rotate_by_combination ({1, 0, 1, 0});
+}
+
+void moveForwardRight () {
+    int comb[4] = {1, 0, 0, 0};
+    rotate_by_combination(comb, 255, 255);
+}
+
+void moveBackwardRight () {
+    int comb[4] = {0, 1, 0, 0};
+    rotate_by_combination(comb, 255, 255);
+}
+
+void moveForwardLeft () {
+    int comb[4] = {0, 0, 1, 0};
+    rotate_by_combination(comb, 255, 255);
+}
+
+void moveBackwardLeft () {
+    int comb[4] = {0, 0, 0, 1};
+    rotate_by_combination(comb, 255, 255);
+}
+
+void test_movements(){
+    // testing moving functions
+    turnRight();
+    delay(2150);
+    stopFast();
+    count_pulses(); // with given freq
+
+    Serial.print("pulses_num_left: ");
+    Serial.print(pulses_num_left);
+    Serial.println();
+}
+
 
 void loop() {
 
     curr_Millis=millis();
 
     if (curr_Millis-prev_count_Millis >= 1000/counting_freq) {
-        encFunc();
-        count_pulses(); // NL NR
+
+//        count_pulses(); // NL NR
+//        Serial.println(NL);
+//        Serial.println(NR);
+
         pid_controller();
+//
+//        encFunc();
+        // update timer
+        
+        move_at(G_curr[0], G_curr[1]);
+        
+        prev_count_Millis=curr_Millis;
+        
+          
+//        Serial.print(" v_curr ");
+//        Serial.print(v_curr*100);
+
     }
 
+    Serial.print(w_curr*100);
+//    Serial.print(v_curr*100);
+    Serial.println();
+
+//    moveForward();
+//    delay(5000);
+//    delay(2100);
+//    turnRight();
+
+//    stopFast();
+//    delay(7000);
+//    
 }
+
+//23/5s pi/4 rad/s
+
+
+
+
+
+
+
+
+
+
+
+
+
 
