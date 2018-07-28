@@ -186,8 +186,8 @@ void vel_to_wheels(float V, float W){
 
 void vel_to_wheels_desired(float V_des, float W_des){
     // convert current desired velocities to desired wheels' rot vels
-    wLd_curr = (float)(V_des-b*W_des/2)/r;
-    wRd_curr = (float)(V_des+b*W_des/2)/r;
+    wLd = (float)(V_des-b*W_des/2)/r;
+    wRd = (float)(V_des+b*W_des/2)/r;
 }
 
 void posUpdate(int NL, int NR, float r, float b, float C) {
@@ -237,7 +237,8 @@ void PID (){
     // We have wL wR
 
     // save prev
-    ep_prev = ep_curr;
+    ep_prev[0] = ep_curr[0];
+    ep_prev[1] = ep_curr[1];
     // left proportional
     ep_curr[0] = wLd - wL; // in hz
     // right proportional
@@ -419,14 +420,14 @@ void loop() {
 
         pid_controller();
 
-        move_at(G_curr[0], G_curr[1]);
+        move_at(G[0], G[1]);
 
         prev_count_Millis = curr_Millis;
 
     }
 
-    Serial.print(w_curr*100);
-//    Serial.print(v_curr*100);
+    Serial.print(w*100);
+//    Serial.print(v*100);
     Serial.println();
 }
 
