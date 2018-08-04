@@ -12,17 +12,17 @@ import random
 navigation_parameters = {
 
     'fast_lin_speed': 8.0, # m/s
-    'mid_lin_speed': 3.5,
+    'mid_lin_speed': 2.5,
     'slow_lin_speed': 0.8,
     
     'fast_ang_speed': np.pi/0.5, # rad/s
-    'mid_ang_speed': np.pi/1.5,
-    'slow_ang_speed': np.pi/2.5,
+    'mid_ang_speed': np.pi/2,
+    'slow_ang_speed': np.pi/3,
     
-    'close_distance_threshold': 0.8, # m
+    'close_distance_threshold': 1.0, # m
     'far_distance_threshold': 1.5,
-    'cycle_threshold': 300,
-    
+    'cycle_threshold': 125,
+
     'pub_topic': '/cmd_vel',
     'sub_topic0': '/base_scan_0',
     'sub_topic1': '/base_scan_1',
@@ -30,7 +30,7 @@ navigation_parameters = {
 }
 
 
-class NavigationCommander:
+class Navigator:
 
     def __init__(self, algorithm = 'follow_left', fast_lin_speed=1.0, mid_lin_speed=0.5,slow_lin_speed=0.2, fast_ang_speed=np.pi/2,mid_ang_speed=np.pi/4, slow_ang_speed=np.pi/8, close_distance_threshold = 0.5, far_distance_threshold = 1.5, cycle_threshold = 5, pub_topic = '/cmd_vel', sub_topic0 = '/base_scan_0', sub_topic1='/base_scan_1', sub_topic2='/base_scan_2'):
 
@@ -96,7 +96,6 @@ class NavigationCommander:
             else:
                 # obstacle_distance_left < 0
                 #rospy.logwarn
-                pass
                 rospy.loginfo("obstacle_distance: {}, of sensor: {}".format(obstacle_distance, sensor_index))
         else:
             # rospy.logerror
@@ -161,8 +160,11 @@ class NavigationCommander:
         
         '''following left wall'''
         # mb subscribers here
-        rospy.loginfo(
-            "far state: {}, close state: {}".format(self.curr_sensors_state_far, self.curr_sensors_state_close))
+        # rospy.loginfo(
+        #     "far state: {}, close state: {}".format(self.curr_sensors_state_far, self.curr_sensors_state_close))
+
+        if self.cycle_counter >= self.cycle_threshold:
+            self.cycle_counter = -self.cycle_threshold
 
         if not any(self.curr_sensors_state_far) and not any(self.curr_sensors_state_close):
             # no obstacles (like [0,0,0] [0,0,0])
@@ -174,10 +176,10 @@ class NavigationCommander:
             self.move_forward_left(lin_speed=self.mid_lin_speed, ang_speed=self.slow_ang_speed)
             self.cycle_counter+=1
 
-        elif    self.curr_sensors_state_close == [1,1,0] or \
-                self.curr_sensors_state_close == [1,0,0]:
+        elif    self.curr_sensors_state_close == [1, 1, 0] or \
+                self.curr_sensors_state_close == [1, 0, 0]:
             # wall on the left
-            self.move_forward_right(lin_speed=self.slow_lin_speed, ang_speed=self.mid_ang_speed)
+            self.move_forward_right(lin_speed=self.mid_lin_speed, ang_speed=self.mid_ang_speed)
             # self.cycle_counter=0
 
         elif    self.curr_sensors_state_close == [0, 1, 1] or \
@@ -188,13 +190,46 @@ class NavigationCommander:
             self.turn_right(ang_speed=self.fast_ang_speed)
             self.cycle_counter=0
 
-        elif self.curr_sensors_state_close == [1, 0, 1]:
+        elif    self.curr_sensors_state_close == [1, 0, 1]:
             # wall on the right and on the left
             self.move_forward(lin_speed=self.slow_lin_speed)
             # self.cycle_counter=0
 
     def follow_right_wall(self):
-        pass
+
+        '''following left wall'''
+        # mb subscribers here
+        # rospy.loginfo(
+        #     "far state: {}, close state: {}".format(self.curr_sensors_state_far, self.curr_sensors_state_close))
+
+        if not any(self.curr_sensors_state_far) and not any(self.curr_sensors_state_close):
+            # no obstacles (like [0,0,0] [0,0,0])
+            self.move_forward_right(lin_speed=self.fast_lin_speed, ang_speed=self.slow_ang_speed)
+            self.cycle_counter+=1
+
+        elif any(self.curr_sensors_state_far) and not any(self.curr_sensors_state_close):
+            # obstacles far (like [0,1,0] [0,0,0])
+            self.move_forward_right(lin_speed=self.mid_lin_speed, ang_speed=self.slow_ang_speed)
+            self.cycle_counter+=1
+
+        elif    self.curr_sensors_state_close == [0, 1, 1] or \
+                self.curr_sensors_state_close == [0, 0, 1]:
+            # wall on the right
+            self.move_forward_left(lin_speed=self.mid_lin_speed, ang_speed=self.mid_ang_speed)
+
+        elif    self.curr_sensors_state_close == [1, 1, 0] or \
+                self.curr_sensors_state_close == [1, 0, 0] or \
+                self.curr_sensors_state_close == [0, 1, 0] or \
+                self.curr_sensors_state_close == [1, 1, 1]:
+            # wall on the left or in front or everywhere
+            self.turn_left(ang_speed=self.fast_ang_speed)
+            # twice threshold
+            self.cycle_counter=-self.cycle_threshold
+
+        elif    self.curr_sensors_state_close == [1, 0, 1]:
+            # wall on the right and on the left
+            self.move_forward(lin_speed=self.slow_lin_speed)
+
     def random_navigation(self):
         pass
 
@@ -202,18 +237,21 @@ def main():
 
     rospy.init_node('reactive_nav')
 
-    commander = NavigationCommander(**navigation_parameters)
+    commander = Navigator(**navigation_parameters)
 
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
 
         if 0 <= commander.cycle_counter <= commander.cycle_threshold:
             # increments in cycles
+            rospy.loginfo("commander.cycle_counter: {}".format(commander.cycle_counter))
             commander.follow_left_wall()
-        else:
+        elif -commander.cycle_threshold <= commander.cycle_counter < 0:
             # decrements in cycles
-            commander.cycle_counter = 2*commander.cycle_threshold
+            rospy.loginfo("commander.cycle_counter: {}".format(commander.cycle_counter))
             commander.follow_right_wall()
+        else:
+            rospy.loginfo("commander.cycle_counter: {}".format(commander.cycle_counter))
 
         rate.sleep()
 
