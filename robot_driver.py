@@ -45,9 +45,6 @@ class Driver:
         self.x = 0
         self.y = 0
         self.theta = 0
-        self.prev_x = 0
-        self.prev_y = 0
-        self.prev_theta = 0
         self.v = 0
         self.w = 0
         self.rate = rate
@@ -111,17 +108,15 @@ class Driver:
 
         '''Gets position and updates vars'''
 
+        # update velocities
+        self.v = (msgIn.x - self.x)*self.rate/np.cos(self.theta)
+        # self.v = (msgIn.y - self.y)*self.rate/np.sin(self.theta)
+        self.w = (msgIn.theta - self.theta)*self.rate
+
+        # update pose
         self.x = msgIn.x
         self.y = msgIn.y
         self.theta = msgIn.theta
-        self.v = (self.x - self.prev_x)*self.rate/np.cos(self.theta)
-        # self.v = (self.y - self.prev_y)*self.rate/np.sin(self.theta)
-        self.w = (self.theta - self.prev_theta)*self.rate
-
-        # keep prev
-        self.prev_x = self.x
-        self.prev_y = self.y
-        self.prev_theta = self.theta
 
     def publish_odom(self):
         current_time = rospy.Time.now()
@@ -137,7 +132,7 @@ class Driver:
             parent = "odom"
         )
 
-        # next, publish the odometry message over ROS
+        # next, create the odometry message and fill with data
         odom = Odometry()
         odom.header.stamp = current_time
         odom.header.frame_id = "odom"
@@ -150,7 +145,6 @@ class Driver:
         odom.twist.twist = Twist(Vector3(self.v, 0, 0), Vector3(0, 0, self.w))
 
         # publish the message
-        # rospy.loginfo(odom)
         self.odom_pub.publish(odom)
 
     def turn_left(self, ang_speed=np.pi / 4):
