@@ -1,0 +1,15 @@
+
+<launch>
+    <node
+        name="stageros"
+        pkg="stage_ros"
+        type="stageros"
+        args="$(find simstage_groupJ)/worlds/rooms.world"
+    />
+    <node
+        pkg="teleop_twist_keyboard"
+        type="teleop_twist_keyboard.py"
+        name="teleop_twist"
+        output="screen"
+    />
+</launch>

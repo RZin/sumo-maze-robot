@@ -1,0 +1,11 @@
+
+<launch>
+    <node
+        name="serial"
+        pkg="rosserial_python"
+        type="serial_node.py"
+	output="screen"
+    >
+       <param name="port" value="/dev/arduino"/>
+    </node>
+</launch>

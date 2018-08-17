@@ -1,0 +1,9 @@
+
+<launch>
+  <include
+    file="$(find robotcraft2018_driver_g10)/launch/robot_firmware.launch"
+  />
+  <include
+    file="$(find robotcraft2018_driver_g10)/launch/robot_driver.launch"
+  />
+</launch>

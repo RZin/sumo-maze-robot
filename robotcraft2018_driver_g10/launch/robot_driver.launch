@@ -1,0 +1,14 @@
+<launch>
+    <node
+        pkg="robotcraft2018_driver_g10"
+        type="robot_driver.py"
+        name="robot_driver"
+    />
+    <!--<node-->
+        <!--pkg="robotcraft2018_driver_g10"-->
+        <!--type="square_test.py"-->
+        <!--name="square_test"-->
+        <!--output="screen"-->
+    <!--/>-->
+</launch>
+
