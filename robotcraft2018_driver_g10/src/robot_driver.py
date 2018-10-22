@@ -256,14 +256,6 @@ def move_by_ticks(driver, counter, counter_change_state, FW_speed, TL_speed):
         driver.move_forward(lin_speed=FW_speed)
     elif 8 * counter_change_state <= counter < 9 * counter_change_state:
         driver.turn_left(ang_speed=TL_speed)
-    # elif 9 * counter_change_state <= counter < 10 * counter_change_state:
-    #     driver.move_forward(lin_speed=FW_speed)
-    # elif 10 * counter_change_state <= counter < 11 * counter_change_state:
-    #     driver.turn_left(ang_speed=TL_speed)
-    # elif 11 * counter_change_state <= counter < 12 * counter_change_state:
-    #     driver.move_forward(lin_speed=FW_speed)
-    # elif 12 * counter_change_state <= counter < 13 * counter_change_state:
-    #     driver.turn_left(ang_speed=TL_speed)
     else:
         driver.stop_moving()
 
@@ -284,11 +276,9 @@ def movements_by_ticks(counter_change_state, FW_speed, TL_speed):
         driver.rate.sleep()
         counter += 1
 
-        # rospy.loginfo("counter {}".format(str(counter)))
-
+        
 if __name__ == '__main__':
     try:
-        # movements_by_ticks(*tick_params)
-        pass
+        movements_by_ticks(*tick_params)
     except rospy.ROSInterruptException:
         pass
