@@ -88,14 +88,17 @@ int Led1_R, Led1_G, Led1_B, Led2_R, Led2_G, Led2_B;
 const float counting_freq = 10.0;
 const float left_pulses_correction = 1.00; // left motor sensor correction coeficient
 
+
+//
+// S E N S O R S    D A T A
+//
+
 int IR_to_mm(float IR_raw){
     // 320, 1.1 and 3.7 params found experimentally using curve fitting
     // returns distance in mm
     return (pow(320/IR_raw, 1.1) + 3.7)*10;
 }
 
-
-// sensors data 
 float sense_L () {
     return IR_to_mm(map(analogRead(IR_L_pin), 0, 1023, 0, 100))*0.001;
 }
@@ -555,19 +558,19 @@ void loop() {
 
         move_at(G[0], G[1]);
 
-//        // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-//        pixels.setPixelColor(0, pixels.Color(0,150,0)); // Moderately bright green color.
-//        pixels.setPixelColor(1, pixels.Color(0,150,0)); // Moderately bright green color.
-//        pixels.show(); // This sends the updated pixel color to the hardware.  
+       // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255  (only two LEDs are used)
+       pixels.setPixelColor(0, pixels.Color(0,150,0)); // Moderately bright green color.
+       pixels.setPixelColor(1, pixels.Color(0,150,0)); // Moderately bright green color.
+       pixels.show(); // This sends the updated pixel color to the hardware.  
 
     }
-
     
-        nh.spinOnce();
-
-//    Serial.print(w*100);
-//    Serial.print(v*100);
-//    Serial.println();
+    nh.spinOnce();
+  
+    //    // print vels for graph analysis
+    //    Serial.print(w*100);
+    //    Serial.print(v*100);
+    //    Serial.println();
 }
 
 
