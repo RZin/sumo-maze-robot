@@ -1,4 +1,3 @@
-
 #include <Encoder.h>
 #include <ros.h>
 #include <std_msgs/String.h>
@@ -81,14 +80,13 @@ const int line_B_pin = A6;
 
 //buzzer
 const int buzzer_pin = 11;
+
 // RGB LEDs
 int Led1_R, Led1_G, Led1_B, Led2_R, Led2_G, Led2_B;
 
-
 // task constants
 const float counting_freq = 10.0;
-const float left_pulses_correction = 1.00; // correction coeficient
-
+const float left_pulses_correction = 1.00; // left motor sensor correction coeficient
 
 int IR_to_mm(float IR_raw){
     // 320, 1.1 and 3.7 params found experimentally using curve fitting
@@ -97,30 +95,24 @@ int IR_to_mm(float IR_raw){
 }
 
 
-// 1.
+// sensors data 
 float sense_L () {
     return IR_to_mm(map(analogRead(IR_L_pin), 0, 1023, 0, 100))*0.001;
 }
-// 2.
 float sense_F () {
     return IR_to_mm(map(analogRead(IR_F_pin), 0, 1023, 0, 100))*0.001;
 }
-// 2.
 float sense_R () {
     return IR_to_mm(map(analogRead(IR_R_pin), 0, 1023, 0, 100))*0.001;
 }
-
-
-
-// 3.
 bool sense_line_F () {
     return (analogRead(line_F_pin)>500);
 }
-// 4.
 bool sense_line_B () {
     return (analogRead(line_B_pin)>500);
 }
-// 5.
+
+
 void count_pulses(){
 
     // call every 100ms for 10Hz
@@ -142,7 +134,7 @@ void count_pulses(){
 }
 
 //
-// C O N T R O L
+// C O N T R O L    S Y S T E M
 //
 
 // time incrementor
@@ -430,7 +422,7 @@ void test_movements(){
 
 
 //
-// ROS communication
+// R O S    C O M M U N I C A T I O N
 //
 
 
@@ -513,6 +505,10 @@ void publish_all(){
     pose_pub.publish( &pose_msg );
     curr_vel_pub.publish( &curr_vel_msg );
 }
+
+//
+// M A I N
+//
 
 void setup() {
     // put your setup code here, to run once:
