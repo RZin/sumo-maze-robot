@@ -1,14 +1,5 @@
-
 #include <Encoder.h>
 #include <ros.h>
-
-// RGB ////////////////////////
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
-// RGB ////////////////////////
-
 #include <std_msgs/String.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
@@ -16,6 +7,12 @@
 #include <geometry_msgs/Pose2D.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/UInt8MultiArray.h>
+
+// RGB //
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
 
 #define NORMALIZE(z) atan2(sin(z), cos(z))  // auxiliary function to normalize angle to the -pi, pi domain
 
@@ -34,22 +31,12 @@ geometry_msgs::Pose2D initial_pose;
 
 ros::NodeHandle  nh;
 
-// RGB ////////////////////////
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1
+// Which pin on the Arduino is connected to the NeoPixels RGB?
 #define GRB_pin 10
-
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS 2
-
-// When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
-// Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
-// example for more information on possible values.
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, GRB_pin, NEO_GRB + NEO_KHZ800);
-
 int delayval = 500; // delay for half a second
-// RGB ////////////////////////
-
 
 // motor_left
 #define BIN1 7
@@ -93,14 +80,18 @@ const int line_B_pin = A6;
 
 //buzzer
 const int buzzer_pin = 11;
+
 // RGB LEDs
 int Led1_R, Led1_G, Led1_B, Led2_R, Led2_G, Led2_B;
 
-
 // task constants
 const float counting_freq = 10.0;
-const float left_pulses_correction = 1.00; // correction coeficient
+const float left_pulses_correction = 1.00; // left motor sensor correction coeficient
 
+
+//
+// S E N S O R S    D A T A
+//
 
 int IR_to_mm(float IR_raw){
     // 320, 1.1 and 3.7 params found experimentally using curve fitting
@@ -108,31 +99,23 @@ int IR_to_mm(float IR_raw){
     return (pow(320/IR_raw, 1.1) + 3.7)*10;
 }
 
-
-// 1.
 float sense_L () {
     return IR_to_mm(map(analogRead(IR_L_pin), 0, 1023, 0, 100))*0.001;
 }
-// 2.
 float sense_F () {
     return IR_to_mm(map(analogRead(IR_F_pin), 0, 1023, 0, 100))*0.001;
 }
-// 2.
 float sense_R () {
     return IR_to_mm(map(analogRead(IR_R_pin), 0, 1023, 0, 100))*0.001;
 }
-
-
-
-// 3.
 bool sense_line_F () {
     return (analogRead(line_F_pin)>500);
 }
-// 4.
 bool sense_line_B () {
     return (analogRead(line_B_pin)>500);
 }
-// 5.
+
+
 void count_pulses(){
 
     // call every 100ms for 10Hz
@@ -153,10 +136,8 @@ void count_pulses(){
     total_pulses_num_Right += abs(pulses_num_right);
 }
 
-
-
 //
-// C O N T R O L
+// C O N T R O L    S Y S T E M
 //
 
 // time incrementor
@@ -167,17 +148,17 @@ float CL=8000;
 float CR=8000;
 float C=(CL+CR)/2;
 
-// positions
+// positions in meters
 float x = 0;
 float y = 0;
 float theta = 0;
 
+// initial positions in meters
 float x_init = 0.0;
 float y_init = 0.0;
 float theta_init = 0.0;
 
-
-//displacement
+//displacement in meters
 float D;
 
 // robot dimensions
@@ -187,22 +168,19 @@ const float r = 0.015; //m 15 mm
 float VD = 0.0; // 0.08 max m/s
 float WD = 0.0; // 2 max rad/s
 
-//float VMAX = 0.08; // m/s
-//float WMAX = 3.14/2; // rad/s PI*r half of round 1,57
-
 //define vels
-float v;
-float w;
+float v; // current linear velocity m/s
+float w; // current angular velocity rad/s
 
-float wL;
-float wR;
+float wL; // current left wheel rotational frequency Hz
+float wR; // current right wheel rotational frequency Hz
 
 //define des vels
-float vd;
-float wd;
+float vd; // desired linear velocity m/s
+float wd; // desired angular velocity rad/s
 
-float wLd;
-float wRd;
+float wLd; // desired left wheel rotational frequency Hz
+float wRd; // desired right wheel rotational frequency Hz
 
 const float delta_t = 1/counting_freq; // in seconds
 
@@ -252,7 +230,6 @@ void calc_pose2(){
     y = y + v*delta_t * sin(theta);
 }
 
-
 // gain constants
 float G[2]={0, 0};
 // define errors
@@ -268,8 +245,6 @@ void PID (){
     float Kd = 4.0;
 
     // update errors
-    // We have wL wR
-
     // save prev
     ep_prev[0] = ep_curr[0];
     ep_prev[1] = ep_curr[1];
@@ -343,7 +318,7 @@ void move_at(float speed_left, float speed_right) {
         speed_right = -255;
     }
 
-    // ser combination
+    // set combination
     if (speed_left>0 && speed_right>0){
         comb[0] = 1;
         comb[1] = 0;
@@ -450,12 +425,13 @@ void test_movements(){
 
 
 //
-// ROS communication
+// R O S    C O M M U N I C A T I O N
 //
 
 
 // Subscribers
 
+// callback functions
 void rgb_leds_cb( const std_msgs::UInt8MultiArray& rgb_leds_msg){
     Led1_R = rgb_leds_msg.data[0];
     Led1_G = rgb_leds_msg.data[1];
@@ -470,7 +446,6 @@ void cmd_vel_cb( geometry_msgs::Twist& cmd_vel_msg){
     WD = cmd_vel_msg.angular.z; // rad/s
 }
 
-
 void set_pose_cb( geometry_msgs::Pose2D& set_pose_msg){
     // set x y theta to 0
     if (set_pose_msg.x != x_init || set_pose_msg.y != y_init || set_pose_msg.theta != theta_init){
@@ -484,10 +459,9 @@ void set_pose_cb( geometry_msgs::Pose2D& set_pose_msg){
     }
 }
 
+// init subs
 ros::Subscriber<std_msgs::UInt8MultiArray> rgb_leds_sub("/rgb_leds", rgb_leds_cb );
-
 ros::Subscriber<geometry_msgs::Twist> cmd_vel_sub("/cmd_vel", cmd_vel_cb );
-
 ros::Subscriber<geometry_msgs::Pose2D> set_pose_sub("/set_pose", set_pose_cb );
 
 
@@ -510,8 +484,6 @@ ros::Publisher pose_pub("/pose", &pose_msg);
 
 geometry_msgs::Twist curr_vel_msg;
 ros::Publisher curr_vel_pub("/curr_vel", &curr_vel_msg);
-
-
 
 void publish_all(){
   
@@ -537,6 +509,9 @@ void publish_all(){
     curr_vel_pub.publish( &curr_vel_msg );
 }
 
+//
+// M A I N
+//
 
 void setup() {
     // put your setup code here, to run once:
@@ -570,9 +545,7 @@ void setup() {
 void loop() {
 
     curr_Millis=millis();
-    
-//    turnLeft();
-    
+       
     if (curr_Millis-prev_count_Millis >= 1000/counting_freq) {
 
         prev_count_Millis = curr_Millis;
@@ -585,20 +558,19 @@ void loop() {
 
         move_at(G[0], G[1]);
 
-//        // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-//        pixels.setPixelColor(0, pixels.Color(0,150,0)); // Moderately bright green color.
-//        pixels.setPixelColor(1, pixels.Color(0,150,0)); // Moderately bright green color.
-//        pixels.show(); // This sends the updated pixel color to the hardware.  
+       // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255  (only two LEDs are used)
+       pixels.setPixelColor(0, pixels.Color(0,150,0)); // Moderately bright green color.
+       pixels.setPixelColor(1, pixels.Color(0,150,0)); // Moderately bright green color.
+       pixels.show(); // This sends the updated pixel color to the hardware.  
 
     }
-
     
-        nh.spinOnce();
-
-
-//    Serial.print(w*100);
-//    Serial.print(v*100);
-//    Serial.println();
+    nh.spinOnce();
+  
+    //    // print vels for graph analysis
+    //    Serial.print(w*100);
+    //    Serial.print(v*100);
+    //    Serial.println();
 }
 
 
