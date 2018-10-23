@@ -89,7 +89,7 @@ const float counting_freq = 10.0;
 const float left_pulses_correction = 1.00; // left motor sensor correction coeficient
 
 
-//
+
 // S E N S O R S    D A T A
 //
 
@@ -136,7 +136,7 @@ void count_pulses(){
     total_pulses_num_Right += abs(pulses_num_right);
 }
 
-//
+
 // C O N T R O L    S Y S T E M
 //
 
@@ -424,7 +424,7 @@ void test_movements(){
 }
 
 
-//
+
 // R O S    C O M M U N I C A T I O N
 //
 
@@ -509,7 +509,7 @@ void publish_all(){
     curr_vel_pub.publish( &curr_vel_msg );
 }
 
-//
+
 // M A I N
 //
 
